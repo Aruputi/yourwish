@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arup's Heart: Access Control</title>
+    <style>
+        :root {
+            --color-green: #0f0;
+            --color-cyan: #00f7ff;
+            --color-blue: #0051ff; /* Royal Blue */
+            --color-purple: #bc13fe; /* Royal Purple */
+            --glow-color: #0f0; /* Dynamic Variable */
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            overflow: hidden;
+            font-family: 'Courier New', Courier, monospace;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: var(--glow-color);
+            transition: color 1s ease;
+        }
+
+        /* MATRIX BG */
+        canvas { position: absolute; top: 0; left: 0; z-index: 0; opacity: 0.2; transition: opacity 2s; }
+
+        /* MAIN TERMINAL */
+        .terminal {
+            z-index: 10;
+            width: 90%;
+            max-width: 600px;
+            background: rgba(0, 10, 0, 0.95);
+            border: 2px solid var(--glow-color);
+            border-radius: 10px;
+            box-shadow: 0 0 20px var(--glow-color);
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            transition: all 0.5s ease;
+        }
+
+        /* HEADER */
+        .header { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .red { background: #ff5f56; } .yellow { background: #ffbd2e; } .green { background: #27c93f; }
+        .title { margin-left: auto; font-size: 12px; opacity: 0.7; }
+
+        /* TYPING TEXT */
+        #console { font-size: 16px; min-height: 80px; text-align: left; margin-bottom: 20px; }
+        .cursor { display: inline-block; width: 8px; height: 18px; background: var(--glow-color); animation: blink 1s infinite; }
+
+        /* LOADING BAR */
+        .progress-container { width: 100%; background: #222; height: 10px; border-radius: 5px; margin-top: 20px; display: none; }
+        .progress-bar { height: 100%; background: var(--glow-color); width: 0%; transition: width 0.5s; border-radius: 5px; }
+
+        /* QUIZ & QUESTION AREA */
+        .interactive-area { display: none; margin-top: 20px; animation: fadeIn 1s; }
+        h2 { font-size: 24px; text-transform: uppercase; margin-bottom: 15px; }
+        p { font-size: 18px; margin-bottom: 30px; }
+
+        /* BUTTONS */
+        .btn-group { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+        button {
+            padding: 12px 30px; font-size: 18px; font-family: inherit; font-weight: bold;
+            background: rgba(0,0,0,0.3); border: 2px solid var(--glow-color); color: var(--glow-color);
+            cursor: pointer; transition: 0.3s; border-radius: 5px;
+        }
+        button:hover { background: var(--glow-color); color: #000; box-shadow: 0 0 15px var(--glow-color); }
+
+        /* THE RUNAWAY BUTTON */
+        #noBtn { position: relative; transition: all 0.3s ease-out; }
+
+        /* PHOTO REVEAL */
+        .photo-box { display: none; margin-top: 20px; animation: fadeIn 2s; }
+        img { width: 100%; max-width: 300px; border: 4px solid var(--color-purple); border-radius: 10px; box-shadow: 0 0 40px var(--color-purple); }
+
+        /* ANIMATIONS */
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* COLOR MODES */
+        .cyan-mode { --glow-color: var(--color-cyan); }
+        .blue-mode { --glow-color: var(--color-blue); }
+        .purple-mode { --glow-color: var(--color-purple); }
+
+        .final-text { color: var(--color-purple); margin-top: 15px; font-size: 20px; text-shadow: 0 0 10px var(--color-purple); }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="matrix"></canvas>
+
+    <div class="terminal" id="terminal">
+        <div class="header">
+            <div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div>
+            <span class="title">user: Arup // target: Joyee</span>
+        </div>
+
+        <div id="console">
+            <span id="typed-text"></span><span class="cursor"></span>
+        </div>
+        
+        <div class="progress-container" id="progressBox">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <div class="interactive-area" id="quizArea">
+            <h2 id="quizTitle">SECURITY CHECK</h2>
+            <p id="quizQuestion">Loading...</p>
+            <div class="btn-group" id="quizButtons"></div>
+        </div>
+
+        <div class="interactive-area" id="proposalArea">
+            <h2>⚠ CRITICAL QUESTION ⚠</h2>
+            <p>Will you be my Valentine & Marry Me?</p>
+            <div class="btn-group">
+                <button onclick="acceptLove()">YES, I WILL! ❤</button>
+                <button id="noBtn" onmouseover="dodge(this)" onclick="dodge(this)">NO</button>
+            </div>
+        </div>
+
+        <div class="photo-box" id="photoArea">
+            <img src="photoo.jpeg?q=80&w=600&auto=format&fit=crop" alt="Us">
+            <p class="final-text">
+                Access Granted. <br> I promise to debug all your bad days. 💜
+		Happy Valentine's Day Joyee.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // === CONFIG ===
+        const config = {
+            typingSpeed: 30,
+            matrixChars: "01♥ARUPJOYEE"
+        };
+
+        // === MATRIX EFFECT ===
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+        const columns = canvas.width / 14;
+        const drops = Array(Math.floor(columns)).fill(1);
+
+        function drawMatrix() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Dynamic color based on current mode
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--glow-color');
+            ctx.font = "14px monospace";
+            for (let i = 0; i < drops.length; i++) {
+                const text = config.matrixChars.charAt(Math.floor(Math.random() * config.matrixChars.length));
+                ctx.fillText(text, i * 14, drops[i] * 14);
+                if (drops[i] * 14 > canvas.height && Math.random() > 0.98) drops[i] = 0;
+                drops[i]++;
+            }
+        }
+        setInterval(drawMatrix, 40);
+
+        // === LOGIC ===
+        const messages = [
+            "> Initializing Heartbeat Protocol...",
+            "> Detecting User: Joyee...",
+            "> Status: Beautiful as always.",
+            "> Encrypted Message Found.",
+            "> Decrypting... Please complete security check."
+        ];
+        
+        let msgIndex = 0; let charIndex = 0;
+        const typeSpan = document.getElementById('typed-text');
+
+        function typeText() {
+            if (msgIndex < messages.length) {
+                if (charIndex < messages[msgIndex].length) {
+                    typeSpan.innerHTML += messages[msgIndex].charAt(charIndex);
+                    charIndex++;
+                    setTimeout(typeText, config.typingSpeed);
+                } else {
+                    typeSpan.innerHTML += "<br>"; charIndex = 0; msgIndex++;
+                    setTimeout(typeText, 300);
+                }
+            } else {
+                startQuiz();
+            }
+        }
+        window.onload = typeText;
+
+        // === QUIZ LOGIC (V5) ===
+        const questions = [
+            { q: "Who is the cutest girl in the world?", a: ["Joyee", "Me"] },
+            { q: "Who loves you the most?", a: ["Arup", "Arup (Obviously)"] },
+            { q: "Are you ready to see the truth?", a: ["Yes", "Absolutely"] }
+        ];
+        let qIndex = 0;
+
+        function startQuiz() {
+            document.getElementById('progressBox').style.display = 'block';
+            document.body.classList.add('cyan-mode'); // Switch to Cyan/Blue
+            document.getElementById('console').style.display = 'none';
+            document.getElementById('quizArea').style.display = 'block';
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (qIndex < questions.length) {
+                // Update Progress Bar
+                const progress = ((qIndex) / questions.length) * 100;
+                document.getElementById('progressBar').style.width = progress + "%";
+
+                const q = questions[qIndex];
+                document.getElementById('quizQuestion').innerText = q.q;
+                const btnBox = document.getElementById('quizButtons');
+                btnBox.innerHTML = ""; // Clear buttons
+                
+                q.a.forEach(ans => {
+                    const btn = document.createElement('button');
+                    btn.innerText = ans;
+                    btn.onclick = () => nextQuestion();
+                    btnBox.appendChild(btn);
+                });
+            } else {
+                launchProposal();
+            }
+        }
+
+        function nextQuestion() {
+            qIndex++;
+            loadQuestion();
+        }
+
+        // === PROPOSAL LOGIC (ROYAL BLUE) ===
+        function launchProposal() {
+            document.getElementById('progressBar').style.width = "100%";
+            setTimeout(() => {
+                document.body.classList.remove('cyan-mode');
+                document.body.classList.add('blue-mode'); // Switch to Royal Blue
+                document.getElementById('quizArea').style.display = 'none';
+                document.getElementById('progressBox').style.display = 'none';
+                document.getElementById('proposalArea').style.display = 'block';
+            }, 500);
+        }
+
+        // === THE FUNNY NO BUTTON ===
+        const funnyTexts = ["Nope!", "Try Again!", "Seriously?", "Missed Me!", "Click YES!", "Error 404", "Nice Try"];
+        
+        function dodge(btn) {
+            btn.innerText = funnyTexts[Math.floor(Math.random() * funnyTexts.length)];
+            const x = Math.random() * (window.innerWidth - 200);
+            const y = Math.random() * (window.innerHeight - 200);
+            const safeX = Math.max(20, Math.min(x, window.innerWidth - 120));
+            const safeY = Math.max(20, Math.min(y, window.innerHeight - 80));
+
+            btn.style.position = "fixed";
+            btn.style.left = safeX + "px";
+            btn.style.top = safeY + "px";
+        }
+
+        // === FINAL SUCCESS (PURPLE) ===
+        function acceptLove() {
+            document.body.classList.remove('blue-mode');
+            document.body.classList.add('purple-mode'); // Switch to Purple
+
+            document.getElementById('proposalArea').style.display = 'none';
+            document.getElementById('photoArea').style.display = 'block';
+            createHearts();
+        }
+
+        function createHearts() {
+            setInterval(() => {
+                const heart = document.createElement('div');
+                heart.innerHTML = "💜";
+                heart.style.position = "fixed";
+                heart.style.color = "#bc13fe";
+                heart.style.fontSize = Math.random() * 30 + 20 + "px";
+                heart.style.left = Math.random() * 100 + "vw";
+                heart.style.top = "100vh";
+                heart.style.transition = "all 4s linear";
+                heart.style.zIndex = "5";
+                document.body.appendChild(heart);
+                setTimeout(() => { heart.style.top = "-10vh"; }, 100);
+                setTimeout(() => { heart.remove() }, 4000);
+            }, 100);
+        }
+
+    </script>
+</body>
+</html>
